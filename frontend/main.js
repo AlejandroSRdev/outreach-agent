@@ -1,5 +1,4 @@
-// Change this to the production backend URL before deploying
-const API_BASE = "http://localhost:8000";
+const API_URL = import.meta.env.VITE_API_URL;
 
 const LEADS = [
   { name: "Alice Johnson",    company: "Acme Corp",         role: "VP of Engineering" },
@@ -113,7 +112,7 @@ async function runBatch() {
   resultsContainer.innerHTML = "";
 
   try {
-    const response = await fetch(API_BASE + "/batch", {
+    const response = await fetch(`${API_URL}/batch`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ leads: selectedLeads }),

@@ -1,7 +1,9 @@
 from contextlib import asynccontextmanager
 import asyncio
+import os
 
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from openai import AsyncOpenAI
 
 from src.config.settings import settings
@@ -44,6 +46,17 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Outreach Agent", version="0.1.0", lifespan=lifespan)
+
+frontend_url = os.getenv("FRONTEND_URL")
+origins = [frontend_url] if frontend_url else ["*"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["POST"],
+    allow_headers=["*"],
+)
 
 app.include_router(health_router)
 app.include_router(outreach_router, prefix="/outreach")
