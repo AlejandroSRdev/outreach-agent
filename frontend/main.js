@@ -112,7 +112,7 @@ async function runBatch() {
   resultsContainer.innerHTML = "";
 
   try {
-    const response = await fetch(`${API_URL}/batch`, {
+    const response = await fetch(`${API_URL}/outreach/batch`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ leads: selectedLeads }),
