@@ -1,0 +1,144 @@
+body {
+  font-family: sans-serif;
+  max-width: 900px;
+  margin: 40px auto;
+  padding: 0 20px;
+  color: #111;
+}
+
+h1 {
+  margin-bottom: 16px;
+}
+
+#selection-counter {
+  font-weight: bold;
+  margin-bottom: 12px;
+  font-size: 1rem;
+}
+
+/* Lead table */
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+}
+
+th,
+td {
+  border: 1px solid #ccc;
+  padding: 8px 12px;
+  text-align: left;
+}
+
+th {
+  background-color: #f0f0f0;
+}
+
+.col-select {
+  text-align: center;
+}
+
+/* Run button */
+
+#run-btn {
+  padding: 10px 24px;
+  font-size: 1rem;
+  background-color: #1a73e8;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+#run-btn:hover:not([disabled]) {
+  background-color: #1558b0;
+}
+
+#run-btn[disabled] {
+  opacity: 0.4;
+  cursor: default;
+}
+
+#status-msg {
+  margin-left: 12px;
+  font-style: italic;
+  color: #555;
+}
+
+/* Result blocks */
+
+#results-container {
+  margin-top: 28px;
+}
+
+.result-block {
+  padding: 16px 0;
+  border-bottom: 1px solid #ddd;
+}
+
+.result-header {
+  font-weight: bold;
+  font-size: 1rem;
+  margin-bottom: 4px;
+}
+
+.result-subject {
+  margin: 8px 0 6px;
+  font-weight: 600;
+}
+
+.status-success {
+  color: #2e7d32;
+  margin-bottom: 4px;
+}
+
+.status-failed {
+  color: #c62828;
+  margin-bottom: 4px;
+}
+
+.result-error {
+  color: #c62828;
+  margin-top: 6px;
+}
+
+.result-error-global {
+  margin-top: 16px;
+  padding: 12px;
+  border: 1px solid #f5c2c2;
+  background-color: #fff0f0;
+  border-radius: 4px;
+  color: #c62828;
+}
+
+/* Email body textarea */
+
+textarea {
+  display: block;
+  width: 100%;
+  min-height: 120px;
+  font-family: monospace;
+  font-size: 0.875rem;
+  resize: vertical;
+  border: 1px solid #ccc;
+  padding: 8px;
+  box-sizing: border-box;
+  margin-top: 6px;
+}
+
+/* Copy button */
+
+.copy-btn {
+  margin-top: 6px;
+  padding: 4px 12px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  background-color: #f5f5f5;
+  border: 1px solid #bbb;
+  border-radius: 3px;
+}
+
+.copy-btn:hover {
+  background-color: #e8e8e8;
+}

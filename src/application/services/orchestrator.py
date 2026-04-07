@@ -1,0 +1,55 @@
+import asyncio
+import logging
+import uuid
+
+from src.domain.models.lead import LeadInput
+from src.domain.models.email import GeneratedEmail
+from src.application.services.pipeline import OutreachPipeline
+
+logger = logging.getLogger(__name__)
+
+
+class BatchOrchestrator:
+    def __init__(self, pipeline: OutreachPipeline, semaphore: asyncio.Semaphore) -> None:
+        self.pipeline = pipeline
+        self.semaphore = semaphore
+
+    async def run_batch(self, leads: list[LeadInput]) -> list[dict]:
+        batch_id = str(uuid.uuid4())
+        logger.info("batch_start", extra={"batch_id": batch_id, "lead_count": len(leads)})
+        batch_start_time = asyncio.get_event_loop().time()
+
+        coroutines = [self._run_one(lead, batch_id) for lead in leads]
+        raw_results = await asyncio.gather(*coroutines, return_exceptions=True)
+
+        results = []
+        for lead, outcome in zip(leads, raw_results):
+            if isinstance(outcome, GeneratedEmail):
+                results.append({"lead": lead.name, "status": "success", "result": outcome.model_dump()})
+            else:
+                results.append({"lead": lead.name, "status": "failed", "error": str(outcome)})
+
+        succeeded = sum(1 for r in results if r["status"] == "success")
+        failed = len(results) - succeeded
+        duration_ms = int((asyncio.get_event_loop().time() - batch_start_time) * 1000)
+        logger.info(
+            "batch_complete",
+            extra={
+                "batch_id": batch_id,
+                "total": len(results),
+                "succeeded": succeeded,
+                "failed": failed,
+                "duration_ms": duration_ms,
+            },
+        )
+        return results
+
+    async def _run_one(self, lead: LeadInput, batch_id: str) -> GeneratedEmail:
+        wait_start = asyncio.get_event_loop().time()
+        async with self.semaphore:
+            wait_ms = int((asyncio.get_event_loop().time() - wait_start) * 1000)
+            logger.info(
+                "semaphore_acquired",
+                extra={"batch_id": batch_id, "lead": lead.name, "wait_ms": wait_ms},
+            )
+            return await self.pipeline.run(lead)
