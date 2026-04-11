@@ -1,6 +1,8 @@
 from contextlib import asynccontextmanager
 import asyncio
+import logging
 import os
+import sys
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -26,6 +28,12 @@ from src.infrastructure.api.routers.outreach import router as outreach_router  #
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    logging.basicConfig(
+        level=getattr(logging, settings.log_level.upper(), logging.INFO),
+        format="%(asctime)s %(levelname)-8s %(name)s %(message)s",
+        handlers=[logging.StreamHandler(sys.stdout)],
+        force=True,
+    )
     openai_client = AsyncOpenAI(api_key=settings.openai_api_key)
     research = LLMResearchProvider(client=openai_client, config=RESEARCH_CONFIG)
     ai = OpenAIClient(

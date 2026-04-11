@@ -120,7 +120,7 @@ async function runBatch() {
 
     if (response.ok) {
       const data = await response.json();
-      renderResults(data);
+      renderResults(data.results);
     } else {
       renderError("Server error: " + response.status);
     }
@@ -142,7 +142,7 @@ function renderResults(data) {
 
     const header = document.createElement("div");
     header.className = "result-header";
-    header.textContent = item.lead.name + " — " + item.lead.company;
+    header.textContent = item.lead;
     block.appendChild(header);
 
     const statusLine = document.createElement("div");
