@@ -112,19 +112,39 @@ async function runBatch() {
   resultsContainer.innerHTML = "";
 
   try {
+    console.log("[runBatch] API_URL:", API_URL, "| endpoint:", `${API_URL}/outreach/batch`);
+
     const response = await fetch(`${API_URL}/outreach/batch`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ leads: selectedLeads }),
     });
 
+    console.log("[runBatch] fetch resolved — status:", response.status, "| ok:", response.ok, "| type:", response.type, "| url:", response.url);
+
     if (response.ok) {
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch (jsonErr) {
+        const rawText = await response.clone().text();
+        console.error("[runBatch] JSON parse failed:");
+        console.error("  name:", jsonErr.name);
+        console.error("  message:", jsonErr.message);
+        console.error("  stack:", jsonErr.stack);
+        console.error("  raw response text:", rawText);
+        renderError("Response parse error — invalid JSON from server");
+        return;
+      }
       renderResults(data.results);
     } else {
       renderError("Server error: " + response.status);
     }
   } catch (err) {
+    console.error("[runBatch] catch block hit — full error:", err);
+    console.error("  name:", err.name);
+    console.error("  message:", err.message);
+    console.error("  stack:", err.stack);
     renderError("Network error — backend unreachable");
   } finally {
     isLoading = false;
