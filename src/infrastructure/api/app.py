@@ -15,6 +15,7 @@ from src.infrastructure.research.provider import DBResearchProvider
 from src.application.services.pipeline import OutreachPipeline
 from src.application.services.orchestrator import BatchOrchestrator
 from src.infrastructure.api.routers.health import router as health_router
+from src.infrastructure.db.connection import verify_database_connection
 
 
 # Defined before outreach_router is imported to resolve the circular import:
@@ -34,6 +35,7 @@ async def lifespan(app: FastAPI):
         handlers=[logging.StreamHandler(sys.stdout)],
         force=True,
     )
+    await verify_database_connection()
     openai_client = AsyncOpenAI(api_key=settings.openai_api_key)
     research = DBResearchProvider()
     ai = OpenAIClient(
