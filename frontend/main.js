@@ -1,27 +1,40 @@
 const API_URL = import.meta.env.VITE_API_URL;
 
 const LEADS = [
-  { name: "Alice Johnson",    company: "Acme Corp",         role: "VP of Engineering" },
-  { name: "Bob Martinez",     company: "TechStream",        role: "CTO" },
-  { name: "Carol White",      company: "DataBridge",        role: "Head of Product" },
-  { name: "David Kim",        company: "NovaSystems",       role: "Engineering Manager" },
-  { name: "Emma Davis",       company: "CloudPeak",         role: "Director of Operations" },
-  { name: "Frank Nguyen",     company: "InfraTech",         role: "Platform Lead" },
-  { name: "Grace Lee",        company: "Finlytics",         role: "COO" },
-  { name: "Henry Brown",      company: "Stackwell",         role: "VP of Sales" },
-  { name: "Irene Torres",     company: "Loopify",           role: "Chief Product Officer" },
-  { name: "James Wilson",     company: "Orbiton",           role: "Head of Growth" },
-  { name: "Karen Hall",       company: "Pivotal Labs",      role: "Software Architect" },
-  { name: "Liam Scott",       company: "Meridian AI",       role: "ML Engineering Lead" },
-  { name: "Maria Gonzalez",   company: "Syntho",            role: "Director of Engineering" },
-  { name: "Nathan Clark",     company: "ByteForge",         role: "CEO" },
-  { name: "Olivia Adams",     company: "Fluxbase",          role: "Product Manager" },
-  { name: "Paul Wright",      company: "Zephyr Networks",   role: "Infrastructure Lead" },
-  { name: "Quinn Murphy",     company: "Cortexia",          role: "VP of Product" },
-  { name: "Rachel Baker",     company: "Launchpad Inc",     role: "Head of Engineering" },
-  { name: "Samuel Carter",    company: "Gridline",          role: "CTO" },
-  { name: "Tina Robinson",    company: "Wavelength Co",     role: "Director of Technology" },
+  { id: 1,  name: "Alice Johnson",    company: "Acme Corp",         role: "VP of Engineering" },
+  { id: 2,  name: "Bob Martinez",     company: "TechStream",        role: "CTO" },
+  { id: 3,  name: "Carol White",      company: "DataBridge",        role: "Head of Product" },
+  { id: 4,  name: "David Kim",        company: "NovaSystems",       role: "Engineering Manager" },
+  { id: 5,  name: "Emma Davis",       company: "CloudPeak",         role: "Director of Operations" },
+  { id: 6,  name: "Frank Nguyen",     company: "InfraTech",         role: "Platform Lead" },
+  { id: 7,  name: "Grace Lee",        company: "Finlytics",         role: "COO" },
+  { id: 8,  name: "Henry Brown",      company: "Stackwell",         role: "VP of Sales" },
+  { id: 9,  name: "Irene Torres",     company: "Loopify",           role: "Chief Product Officer" },
+  { id: 10, name: "James Wilson",     company: "Orbiton",           role: "Head of Growth" },
+  { id: 11, name: "Karen Hall",       company: "Pivotal Labs",      role: "Software Architect" },
+  { id: 12, name: "Liam Scott",       company: "Meridian AI",       role: "ML Engineering Lead" },
+  { id: 13, name: "Maria Gonzalez",   company: "Syntho",            role: "Director of Engineering" },
+  { id: 14, name: "Nathan Clark",     company: "ByteForge",         role: "CEO" },
+  { id: 15, name: "Olivia Adams",     company: "Fluxbase",          role: "Product Manager" },
+  { id: 16, name: "Paul Wright",      company: "Zephyr Networks",   role: "Infrastructure Lead" },
+  { id: 17, name: "Quinn Murphy",     company: "Cortexia",          role: "VP of Product" },
+  { id: 18, name: "Rachel Baker",     company: "Launchpad Inc",     role: "Head of Engineering" },
+  { id: 19, name: "Samuel Carter",    company: "Gridline",          role: "CTO" },
+  { id: 20, name: "Tina Robinson",    company: "Wavelength Co",     role: "Director of Technology" },
 ];
+
+const leadById = {};
+LEADS.forEach(function (l) { leadById[l.id] = l; });
+
+function getDisplayName(apiLead) {
+  // On success, the API returns enriched.name (human-readable string).
+  // On failure, the API returns str(lead.lead_id) (numeric string) — look up locally.
+  const asInt = parseInt(apiLead, 10);
+  if (!isNaN(asInt) && leadById[asInt]) {
+    return leadById[asInt].name;
+  }
+  return apiLead;
+}
 
 let selectedLeads = [];
 let isLoading = false;
@@ -85,7 +98,7 @@ function onCheckboxChange(checkbox, lead) {
     selectedLeads.push(lead);
   } else {
     selectedLeads = selectedLeads.filter(function (l) {
-      return !(l.name === lead.name && l.company === lead.company);
+      return l.id !== lead.id;
     });
   }
 
@@ -117,7 +130,7 @@ async function runBatch() {
     const response = await fetch(`${API_URL}/outreach/batch`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ leads: selectedLeads }),
+      body: JSON.stringify({ leads: selectedLeads.map(function (l) { return { lead_id: l.id }; }) }),
     });
 
     console.log("[runBatch] fetch resolved — status:", response.status, "| ok:", response.ok, "| type:", response.type, "| url:", response.url);
@@ -162,7 +175,7 @@ function renderResults(data) {
 
     const header = document.createElement("div");
     header.className = "result-header";
-    header.textContent = item.lead;
+    header.textContent = getDisplayName(item.lead);
     block.appendChild(header);
 
     const statusLine = document.createElement("div");

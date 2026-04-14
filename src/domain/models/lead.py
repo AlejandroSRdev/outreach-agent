@@ -7,9 +7,7 @@ from pydantic import BaseModel
 
 
 class LeadInput(BaseModel):
-    name: str
-    company: str
-    role: str
+    lead_id: int
 
 
 class EnrichedLead(BaseModel):
@@ -28,3 +26,9 @@ class EnrichedLead(BaseModel):
     strategic_focus: Optional[str]
 
     assembled_at: datetime
+
+
+class LeadNotFoundError(Exception):
+    def __init__(self, lead_id: int) -> None:
+        super().__init__(f"Lead not found: id={lead_id}")
+        self.lead_id = lead_id

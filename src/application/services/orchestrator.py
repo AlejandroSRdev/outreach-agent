@@ -24,10 +24,11 @@ class BatchOrchestrator:
 
         results = []
         for lead, outcome in zip(leads, raw_results):
-            if isinstance(outcome, GeneratedEmail):
-                results.append({"lead": lead.name, "status": "success", "result": outcome.model_dump()})
+            if not isinstance(outcome, Exception):
+                email, lead_name = outcome
+                results.append({"lead": lead_name, "status": "success", "result": email.model_dump()})
             else:
-                results.append({"lead": lead.name, "status": "failed", "error": str(outcome)})
+                results.append({"lead": str(lead.lead_id), "status": "failed", "error": str(outcome)})
 
         succeeded = sum(1 for r in results if r["status"] == "success")
         failed = len(results) - succeeded
@@ -50,6 +51,6 @@ class BatchOrchestrator:
             wait_ms = int((asyncio.get_event_loop().time() - wait_start) * 1000)
             logger.info(
                 "semaphore_acquired",
-                extra={"batch_id": batch_id, "lead": lead.name, "wait_ms": wait_ms},
+                extra={"batch_id": batch_id, "wait_ms": wait_ms},
             )
             return await self.pipeline.run(lead)

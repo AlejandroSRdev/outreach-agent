@@ -47,14 +47,14 @@ class OutreachPipeline:
         self.generation_timeout_s = generation_timeout_s
         self.refinement_timeout_s = refinement_timeout_s
 
-    async def run(self, lead: LeadInput) -> GeneratedEmail:
+    async def run(self, lead: LeadInput) -> tuple[GeneratedEmail, str]:
         run_id = str(uuid.uuid4())
-        logger.info("pipeline_start", extra={"run_id": run_id, "lead": lead.name})
 
         enriched = await asyncio.wait_for(
             self.research.enrich(lead),
             timeout=self.research_timeout_s,
         )
+        logger.info("pipeline_start", extra={"run_id": run_id, "lead": enriched.name})
         logger.info("research_complete", extra={"run_id": run_id})
 
         last_error: Exception | None = None
@@ -90,4 +90,4 @@ class OutreachPipeline:
         )
 
         logger.info("pipeline_success", extra={"run_id": run_id})
-        return result
+        return result, enriched.name

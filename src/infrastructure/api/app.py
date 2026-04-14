@@ -9,9 +9,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from openai import AsyncOpenAI
 
 from src.config.settings import settings
-from src.infrastructure.ai.config import RESEARCH_CONFIG, GENERATION_CONFIG, REFINEMENT_CONFIG
+from src.infrastructure.ai.config import GENERATION_CONFIG, REFINEMENT_CONFIG
 from src.infrastructure.ai.client import OpenAIClient
-from src.infrastructure.research.provider import LLMResearchProvider
+from src.infrastructure.research.provider import DBResearchProvider
 from src.application.services.pipeline import OutreachPipeline
 from src.application.services.orchestrator import BatchOrchestrator
 from src.infrastructure.api.routers.health import router as health_router
@@ -35,7 +35,7 @@ async def lifespan(app: FastAPI):
         force=True,
     )
     openai_client = AsyncOpenAI(api_key=settings.openai_api_key)
-    research = LLMResearchProvider(client=openai_client, config=RESEARCH_CONFIG)
+    research = DBResearchProvider()
     ai = OpenAIClient(
         client=openai_client,
         generation_config=GENERATION_CONFIG,

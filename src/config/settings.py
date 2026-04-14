@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     port: int = 8000
     environment: str = "development"
     log_level: str = "INFO"
+    database_url: str
     openai_api_key: str
     max_concurrent_pipelines: int = 10
     max_batch_size: int = 20

@@ -9,7 +9,7 @@ def build_generation_prompt(enriched: EnrichedLead, hint: str | None = None) -> 
         "",
         "The objective is to produce a message that feels thoughtful, relevant and commercially intelligent — not generic, not exaggerated, and not obviously AI-written.",
         "",
-        "You must infer the most plausible angle of relevance from the lead context and build the email around that angle.",
+        "Identify the most relevant angle from the provided lead data and build the email around it.",
         "",
         "## Lead data",
         f"Name: {enriched.name}",
