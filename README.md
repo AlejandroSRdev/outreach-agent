@@ -1,12 +1,12 @@
-# Outreach Agent — AI-Powered Batch Outreach System
+# Outreach Agent — AI-Powered Outreach Automation Backend
 
 ## Overview
 
-Outreach Agent is a backend system designed to generate **high-quality, personalized outbound emails at scale**, using controlled AI pipelines.
+Outreach Agent is a **production-oriented backend system** for AI-powered workflow automation, designed to generate personalized outbound emails at scale with measurable reliability.
 
-The system processes structured lead input and executes a **multi-step pipeline** per lead, ensuring that AI remains a **governed dependency**, not a source of uncontrolled behavior.
+The system processes leads from a **persistent PostgreSQL data layer** and executes a **multi-step pipeline** per lead — partially deterministic (data retrieval), partially non-deterministic (LLM inference) — with the architectural goal of keeping AI under strict system control at all times.
 
-This project focuses on **system design, reliability, and observability**, rather than raw AI usage.
+This project focuses on **system design, reliability, and observability**, not raw AI usage.
 
 ---
 
@@ -18,10 +18,11 @@ Most AI-based outreach tools fail due to:
 * Lack of structure and validation
 * Poor handling of concurrency and failures
 * Over-reliance on a single model call
+* Ephemeral, non-reproducible execution
 
 Outreach Agent addresses this by:
 
-> Treating AI as a non-deterministic external system that must be constrained, validated, and observed.
+> Treating AI as a non-deterministic external dependency that must be constrained, validated, and observed — while grounding the system in a deterministic data layer.
 
 ---
 
@@ -31,21 +32,23 @@ Outreach Agent addresses this by:
 
 ```
 Batch Request → Orchestrator → Pipelines (per lead)
-                                ↓
-                     research → generation → refinement
-                                ↓
-                           Structured Output
+                                      ↓
+                  [PostgreSQL] research → generation → refinement
+                                      ↓
+                               Structured Output
 ```
+
+The pipeline operates on **persisted leads** retrieved from the database. This makes execution reproducible, auditable, and decoupled from ad-hoc input.
 
 ---
 
 ### Core Principles
 
-* **Deterministic control over non-deterministic AI**
-* **Separation of concerns (architecture-driven)**
+* **Deterministic data layer, non-deterministic AI layer**
+* **Separation of concerns (layered / hexagonal-inspired architecture)**
 * **Failure isolation per lead**
-* **Controlled concurrency**
-* **Observable system behavior**
+* **Bounded concurrency**
+* **Observable and measurable system behavior**
 
 ---
 
@@ -65,8 +68,55 @@ The system follows a **layered / hexagonal-inspired structure**:
 
 * **Infrastructure**
 
-  * LLM providers
+  * PostgreSQL client (Supabase)
+  * LLM providers (OpenAI)
   * External integrations
+
+---
+
+## Data Layer
+
+The system uses **PostgreSQL via Supabase** as its primary data store.
+
+### Leads Table
+
+Leads are persisted in the database and reused across pipeline executions. This replaces the previous model of static or ad-hoc input, enabling:
+
+* **Reproducibility** — the same lead set can be reprocessed consistently
+* **Real workflows** — the system operates on live datasets, not isolated test inputs
+* **Non-ephemeral execution** — outputs and lead state survive across runs
+
+### Generated Outputs
+
+Pipeline outputs are associated with their corresponding leads, enabling downstream inspection, auditing, and iteration without re-running the full pipeline from scratch.
+
+### Deterministic Backbone
+
+The research stage no longer relies on LLM inference for lead data. It queries the database directly. This eliminates a major source of variance and grounds the pipeline in structured, controlled input before AI is ever invoked.
+
+---
+
+## Pipeline Design
+
+Each lead goes through a **sequential pipeline**:
+
+### 1. Research — Database-Backed
+
+* Retrieves lead context from PostgreSQL (Supabase)
+* **No LLM inference involved at this stage**
+* Deterministic: same input → same output
+* Grounds the pipeline before any AI is introduced
+
+### 2. Generation — LLM-Driven
+
+* Produces the initial email draft using enriched lead context
+* Structured output enforced via validation before advancing
+
+### 3. Refinement — LLM-Controlled
+
+* Improves clarity, tone, and structure
+* Enforces output constraints
+* Final output must pass validation before being returned
 
 ---
 
@@ -80,27 +130,7 @@ This ensures:
 
 * Parallel execution without resource exhaustion
 * Predictable behavior under load
-* Isolation of failures
-
----
-
-## Pipeline Design
-
-Each lead goes through a **sequential pipeline**:
-
-### 1. Research (LLM-assisted)
-
-* Enriches company context
-* Does NOT infer primary input data (e.g. role)
-
-### 2. Generation (LLM)
-
-* Produces initial email draft
-
-### 3. Refinement (LLM)
-
-* Improves clarity, tone, and structure
-* Enforces output constraints
+* Isolation of failures across leads
 
 ---
 
@@ -108,15 +138,11 @@ Each lead goes through a **sequential pipeline**:
 
 ```json
 {
-  "name": "string",
-  "company": "string",
-  "role": "string"
+  "lead_ids": ["uuid", "..."]
 }
 ```
 
-* Fully deterministic
-* No inference of primary data
-* Validated before pipeline execution
+Leads are resolved from the database by ID. The pipeline operates on structured, persisted records — not inline payload data.
 
 ---
 
@@ -133,8 +159,8 @@ Each lead goes through a **sequential pipeline**:
 }
 ```
 
-* Each lead is processed independently
-* Failures do not affect the batch
+* Each lead is processed and reported independently
+* Failures are isolated and do not affect the rest of the batch
 
 ---
 
@@ -142,24 +168,28 @@ Each lead goes through a **sequential pipeline**:
 
 ### Timeouts
 
-* Each step is bounded (`asyncio.wait_for`)
-* Prevents indefinite blocking
+* Each pipeline step is bounded (`asyncio.wait_for`)
+* Prevents indefinite blocking on LLM or I/O calls
 
 ### Retry Strategy
 
-* Retries only for LLM-related failures
-* Uses context-aware correction hints
+* Retries applied selectively to LLM-related failures
+* Uses context-aware correction hints on retry to improve output quality
 
 ### Validation
 
-* Structured output enforced before returning results
-* Invalid outputs are rejected
+* Structured output is enforced at every AI step before advancing
+* Invalid outputs are rejected and trigger retries or failure isolation
 
 ---
 
 ## Observability
 
-The system includes structured logging:
+The system is designed to be **measurable and inspectable** at every stage of execution.
+
+### Structured Logging
+
+Pipeline events are emitted as structured log entries:
 
 * `batch_start`
 * `pipeline_start`
@@ -167,12 +197,22 @@ The system includes structured logging:
 * `pipeline_retry`
 * `batch_complete`
 
-Tracked metrics:
+### Metrics Tracked
 
-* Execution time per pipeline
+* Execution time per pipeline step
 * Batch duration
 * Success / failure ratio
-* Semaphore wait time (saturation signal)
+* Semaphore wait time (concurrency saturation signal)
+
+### Grafana Integration
+
+The system is integrated with **Grafana** for metrics visualization and monitoring. This enables:
+
+* Latency tracking across pipeline stages
+* Monitoring of system behavior under real execution load
+* Detection of degradation in LLM response quality or timing
+
+Observability is not an afterthought — it is a first-class design requirement.
 
 ---
 
@@ -180,7 +220,7 @@ Tracked metrics:
 
 A lightweight frontend is included to:
 
-* Select up to 20 leads from a predefined list
+* Select leads from the persisted dataset
 * Trigger batch execution
 * Visualize outputs per lead
 * Copy generated emails
@@ -193,19 +233,24 @@ This interface is intentionally minimal:
 
 ## Deployment
 
-* Backend: Render
-* Frontend: Vercel (optional)
-* No database required (static lead input)
+* **Backend:** Fly.io
+* **Database:** PostgreSQL via Supabase
+* **Observability:** Grafana
+* **Frontend:** Vercel (optional)
+
+The system is live and operational in a real environment.
 
 ---
 
 ## Tech Stack
 
-* Python (asyncio)
+* Python (`asyncio`)
 * FastAPI
-* LLM APIs (OpenAI)
-* Structured logging
-* JSON-based contracts
+* PostgreSQL (Supabase)
+* OpenAI API
+* Fly.io
+* Grafana
+* Structured logging (JSON)
 
 ---
 
@@ -213,18 +258,18 @@ This interface is intentionally minimal:
 
 * **Synchronous batch response**
 
-  * Simpler system
-  * No queue or background workers
+  * Simpler execution model
+  * No queue or background workers required at current scale
 
-* **No global rate limiting**
+* **No global distributed rate limiting**
 
   * Acceptable for current scope
-  * Can evolve with Redis / distributed control
+  * Can evolve with Redis-based distributed control
 
-* **LLM-based research**
+* **Database-backed research, LLM-driven generation**
 
-  * Flexible but less deterministic
-  * Future improvement: replace with DB or API sources
+  * Research is now fully deterministic (replaced LLM-based enrichment)
+  * Reduces variance in the most data-sensitive pipeline stage
 
 ---
 
@@ -232,9 +277,8 @@ This interface is intentionally minimal:
 
 * Queue-based execution (background workers)
 * Distributed rate limiting
-* Persistent lead storage
 * Streaming responses
-* Hybrid research (LLM + structured data)
+* Per-lead output versioning
 
 ---
 
@@ -242,23 +286,17 @@ This interface is intentionally minimal:
 
 > Concurrency is introduced at the system boundary, while consistency is preserved inside each pipeline.
 
-This allows:
-
-* Parallel execution
-* Without sacrificing correctness
+The data layer enforces determinism where it matters most — at the point where AI receives its input. This is the foundation that makes the rest of the system controllable.
 
 ---
 
 ## Repository Purpose
 
-This project is not intended as a finished product.
+This repository demonstrates **backend engineering applied to AI systems**: how to build a workflow that incorporates non-deterministic dependencies (LLMs) without sacrificing reliability, reproducibility, or observability.
 
-It is a **demonstration of backend system design applied to AI workflows**, focusing on:
+It is a working system, not a prototype. It runs on real infrastructure, against a real database, with real monitoring in place.
 
-* Control
-* Reliability
-* Scalability
-* Observability
+Emphasis: **control**, **reliability**, **scalability**, **observability**.
 
 ---
 
