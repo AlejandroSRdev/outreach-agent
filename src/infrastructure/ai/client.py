@@ -1,6 +1,11 @@
 import json
+import logging
 
 from openai import AsyncOpenAI
+
+from src.infrastructure.ai.cost import compute_cost
+
+logger = logging.getLogger(__name__)
 
 from src.domain.models.lead import EnrichedLead
 from src.domain.models.email import DraftEmail, GeneratedEmail
@@ -28,6 +33,17 @@ class OpenAIClient:
             max_tokens=self.generation_config.max_tokens,
             messages=[{"role": "user", "content": prompt}],
         )
+        usage = response.usage
+        input_tokens  = usage.prompt_tokens     if usage else 0
+        output_tokens = usage.completion_tokens if usage else 0
+        cost = compute_cost(self.generation_config.model, input_tokens, output_tokens)
+        logger.info("llm_call_success", extra={
+            "step":          "generation",
+            "model":         self.generation_config.model,
+            "input_tokens":  input_tokens,
+            "output_tokens": output_tokens,
+            "cost_usd":      round(cost, 8),
+        })
         raw = response.choices[0].message.content.strip()
         first_line = raw.split("\n")[0] if "\n" in raw else raw
         if first_line.lower().startswith("subject:"):
@@ -46,6 +62,17 @@ class OpenAIClient:
             max_tokens=self.refinement_config.max_tokens,
             messages=[{"role": "user", "content": prompt}],
         )
+        usage = response.usage
+        input_tokens  = usage.prompt_tokens     if usage else 0
+        output_tokens = usage.completion_tokens if usage else 0
+        cost = compute_cost(self.refinement_config.model, input_tokens, output_tokens)
+        logger.info("llm_call_success", extra={
+            "step":          "refinement",
+            "model":         self.refinement_config.model,
+            "input_tokens":  input_tokens,
+            "output_tokens": output_tokens,
+            "cost_usd":      round(cost, 8),
+        })
         raw = response.choices[0].message.content.strip()
         # Strip markdown code fence if present
         if raw.startswith("```"):

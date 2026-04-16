@@ -6,6 +6,7 @@ from src.domain.models.lead import LeadInput
 from src.domain.models.email import GeneratedEmail
 from src.domain.ports import ResearchProvider, AIClient
 from src.infrastructure.ai.retry import with_retry, is_llm_error, CORRECTION_HINT
+from src.infrastructure.logging.context import request_id_var, lead_id_var
 
 logger = logging.getLogger(__name__)
 
@@ -49,13 +50,15 @@ class OutreachPipeline:
 
     async def run(self, lead: LeadInput) -> tuple[GeneratedEmail, str]:
         run_id = str(uuid.uuid4())
+        request_id_var.set(run_id)
+        lead_id_var.set(lead.lead_id)
 
         enriched = await asyncio.wait_for(
             self.research.enrich(lead),
             timeout=self.research_timeout_s,
         )
-        logger.info("pipeline_start", extra={"run_id": run_id, "lead": enriched.name})
-        logger.info("research_complete", extra={"run_id": run_id})
+        logger.info("pipeline_start")
+        logger.info("pipeline_step_success", extra={"step": "research"})
 
         last_error: Exception | None = None
         last_result: GeneratedEmail | None = None
@@ -67,19 +70,19 @@ class OutreachPipeline:
                 self.ai.generate(enriched, hint=hint),
                 timeout=self.generation_timeout_s,
             )
-            logger.info("generation_complete", extra={"run_id": run_id, "attempt": n})
+            logger.info("pipeline_step_success", extra={"step": "generation", "attempt": n})
             result = await asyncio.wait_for(
                 self.ai.refine(draft, hint=hint),
                 timeout=self.refinement_timeout_s,
             )
-            logger.info("refinement_complete", extra={"run_id": run_id, "attempt": n})
+            logger.info("pipeline_step_success", extra={"step": "refinement", "attempt": n})
             last_result = result
             return result
 
         def _on_retry(err: Exception, n: int) -> None:
             nonlocal last_error
             last_error = err
-            logger.warning("pipeline_retry", extra={"run_id": run_id, "attempt": n, "reason": str(err)})
+            logger.warning("llm_retry", extra={"attempt": n, "reason": str(err)})
 
         result = await with_retry(
             _attempt,
@@ -89,5 +92,5 @@ class OutreachPipeline:
             on_retry=_on_retry,
         )
 
-        logger.info("pipeline_success", extra={"run_id": run_id})
+        logger.info("pipeline_complete")
         return result, enriched.name
