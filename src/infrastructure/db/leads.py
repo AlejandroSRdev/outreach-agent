@@ -17,7 +17,7 @@ _COLUMNS = [
     "tags",
 ]
 
-_SELECT = ", ".join(_COLUMNS)
+_SELECT = "name, company, role, industry, product, value_proposition, target_market, recent_activity, strategic_focus, additional_context, description, tags::text[]"
 
 _QUERY = text(
     f"SELECT {_SELECT} FROM leads WHERE id = :lead_id LIMIT 1"
@@ -36,7 +36,7 @@ async def get_lead_by_id(lead_id: int) -> dict | None:
 
 
 _ALL_COLUMNS = ["id", "name", "company", "role", "industry", "tags"]
-_ALL_SELECT = ", ".join(_ALL_COLUMNS)
+_ALL_SELECT = "id, name, company, role, industry, tags::text[]"
 _ALL_QUERY = text(f"SELECT {_ALL_SELECT} FROM leads ORDER BY id")
 
 
