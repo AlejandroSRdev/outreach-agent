@@ -35,8 +35,7 @@ Goal:
 
 ### Input (Lead)
 Structured JSON:
-- name
-- company
+- lead_id
 
 ### Output (Generated Message)
 Structured JSON:
@@ -82,7 +81,7 @@ Hexagonal architecture (lightweight, non-ceremonial)
 
 Sequential multi-step pipeline:
 
-1. Research (context enrichment — optional/simulated)
+1. Research (context enrichment: deterministic -> database)
 2. Generation (initial draft)
 3. Refinement (clarity, tone, constraints)
 
@@ -163,7 +162,7 @@ Goals:
 ## 11. Deployment
 
 Initial:
-- Render (containerized service)
+- Fly.io (containerized service, Dockerfile)
 
 Future (optional):
 - AWS (App Runner or equivalent)

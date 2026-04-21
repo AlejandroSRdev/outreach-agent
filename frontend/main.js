@@ -1,30 +1,7 @@
 const API_URL = import.meta.env.VITE_API_URL;
 
-const LEADS = [
-  { id: 1,  name: "Alice Johnson",    company: "Acme Corp",         role: "VP of Engineering" },
-  { id: 2,  name: "Bob Martinez",     company: "TechStream",        role: "CTO" },
-  { id: 3,  name: "Carol White",      company: "DataBridge",        role: "Head of Product" },
-  { id: 4,  name: "David Kim",        company: "NovaSystems",       role: "Engineering Manager" },
-  { id: 5,  name: "Emma Davis",       company: "CloudPeak",         role: "Director of Operations" },
-  { id: 6,  name: "Frank Nguyen",     company: "InfraTech",         role: "Platform Lead" },
-  { id: 7,  name: "Grace Lee",        company: "Finlytics",         role: "COO" },
-  { id: 8,  name: "Henry Brown",      company: "Stackwell",         role: "VP of Sales" },
-  { id: 9,  name: "Irene Torres",     company: "Loopify",           role: "Chief Product Officer" },
-  { id: 10, name: "James Wilson",     company: "Orbiton",           role: "Head of Growth" },
-  { id: 11, name: "Karen Hall",       company: "Pivotal Labs",      role: "Software Architect" },
-  { id: 12, name: "Liam Scott",       company: "Meridian AI",       role: "ML Engineering Lead" },
-  { id: 13, name: "Maria Gonzalez",   company: "Syntho",            role: "Director of Engineering" },
-  { id: 14, name: "Nathan Clark",     company: "ByteForge",         role: "CEO" },
-  { id: 15, name: "Olivia Adams",     company: "Fluxbase",          role: "Product Manager" },
-  { id: 16, name: "Paul Wright",      company: "Zephyr Networks",   role: "Infrastructure Lead" },
-  { id: 17, name: "Quinn Murphy",     company: "Cortexia",          role: "VP of Product" },
-  { id: 18, name: "Rachel Baker",     company: "Launchpad Inc",     role: "Head of Engineering" },
-  { id: 19, name: "Samuel Carter",    company: "Gridline",          role: "CTO" },
-  { id: 20, name: "Tina Robinson",    company: "Wavelength Co",     role: "Director of Technology" },
-];
-
+let leads = [];
 const leadById = {};
-LEADS.forEach(function (l) { leadById[l.id] = l; });
 
 function getDisplayName(apiLead) {
   // On success, the API returns enriched.name (human-readable string).
@@ -55,7 +32,7 @@ function renderTable() {
   table.appendChild(thead);
 
   const tbody = document.createElement("tbody");
-  LEADS.forEach(function (lead, index) {
+  leads.forEach(function (lead, index) {
     const tr = document.createElement("tr");
 
     const tdName = document.createElement("td");
@@ -237,6 +214,25 @@ function renderError(message) {
   container.appendChild(block);
 }
 
+async function fetchLeads() {
+  try {
+    const response = await fetch(`${API_URL}/leads`, { method: "GET" });
+
+    if (response.ok) {
+      const data = await response.json();
+      leads = data;
+      leads.forEach(function (lead) { leadById[lead.id] = lead; });
+      renderTable();
+    } else {
+      renderError("Failed to load leads: " + response.status);
+      document.getElementById("run-btn").disabled = true;
+    }
+  } catch (err) {
+    renderError("Network error — could not load leads");
+    document.getElementById("run-btn").disabled = true;
+  }
+}
+
 // Init
 document.getElementById("run-btn").addEventListener("click", runBatch);
-renderTable();
+fetchLeads();

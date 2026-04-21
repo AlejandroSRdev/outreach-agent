@@ -14,6 +14,7 @@ _COLUMNS = [
     "strategic_focus",
     "additional_context",
     "description",
+    "tags",
 ]
 
 _SELECT = ", ".join(_COLUMNS)
@@ -32,3 +33,16 @@ async def get_lead_by_id(lead_id: int) -> dict | None:
             return None
 
         return {col: row[i] for i, col in enumerate(_COLUMNS)}
+
+
+_ALL_COLUMNS = ["id", "name", "company", "role", "industry", "tags"]
+_ALL_SELECT = ", ".join(_ALL_COLUMNS)
+_ALL_QUERY = text(f"SELECT {_ALL_SELECT} FROM leads ORDER BY id")
+
+
+async def get_all_leads() -> list[dict]:
+    async with SessionLocal() as session:
+        result = await session.execute(_ALL_QUERY)
+        rows = result.fetchall()
+
+        return [{col: row[i] for i, col in enumerate(_ALL_COLUMNS)} for row in rows]

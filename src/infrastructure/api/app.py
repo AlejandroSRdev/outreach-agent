@@ -13,6 +13,7 @@ from src.infrastructure.research.provider import DBResearchProvider
 from src.application.services.pipeline import OutreachPipeline
 from src.application.services.orchestrator import BatchOrchestrator
 from src.infrastructure.api.routers.health import router as health_router
+from src.infrastructure.api.routers.leads import router as leads_router
 from src.infrastructure.db.connection import verify_database_connection
 
 
@@ -64,3 +65,4 @@ app.add_middleware(
 
 app.include_router(health_router)
 app.include_router(outreach_router, prefix="/outreach")
+app.include_router(leads_router)
