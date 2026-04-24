@@ -1,46 +1,39 @@
-from typing import Literal
+from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import BaseModel
 
-from fastapi import APIRouter, Depends, Request
-from pydantic import BaseModel, Field
+from src.application.use_cases.start_execution import (
+    StartExecutionUseCase,
+    CampaignNotFoundError,
+)
 
-from src.domain.models.lead import LeadInput
-from src.application.services.orchestrator import BatchOrchestrator
-from src.infrastructure.api.app import get_orchestrator
-
-
-class BatchRequest(BaseModel):
-    leads: list[LeadInput] = Field(min_length=1, max_length=20)
+router = APIRouter()
 
 
-class LeadResult(BaseModel):
-    lead: str
-    status: Literal["success", "failed"]
-    result: dict | None = None
-    error: str | None = None
+class ExecutionRequest(BaseModel):
+    campaign_id: int
 
 
-class BatchResponse(BaseModel):
-    total: int
-    succeeded: int
-    failed: int
-    results: list[LeadResult]
+class ExecutionStartedResponse(BaseModel):
+    execution_id: int
+    status: str
+    total_leads: int
 
 
-router = APIRouter(tags=["outreach"])
+def get_start_execution_use_case(request: Request) -> StartExecutionUseCase:
+    return request.app.state.start_execution_use_case
 
 
-@router.post("/batch", response_model=BatchResponse)
+@router.post("/batch", response_model=ExecutionStartedResponse, status_code=202)
 async def batch_outreach(
-    body: BatchRequest,
-    orchestrator: BatchOrchestrator = Depends(get_orchestrator),
-) -> BatchResponse:
-    raw = await orchestrator.run_batch(body.leads)
-    results = [LeadResult(**r) for r in raw]
-    succeeded = sum(1 for r in results if r.status == "success")
-    failed = len(results) - succeeded
-    return BatchResponse(
-        total=len(results),
-        succeeded=succeeded,
-        failed=failed,
-        results=results,
-    )
+    body: ExecutionRequest,
+    use_case: StartExecutionUseCase = Depends(get_start_execution_use_case),
+) -> ExecutionStartedResponse:
+    try:
+        execution_id, total_leads = await use_case.execute(body.campaign_id)
+        return ExecutionStartedResponse(
+            execution_id=execution_id,
+            status="started",
+            total_leads=total_leads,
+        )
+    except CampaignNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))

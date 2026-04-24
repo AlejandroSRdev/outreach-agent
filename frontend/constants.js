@@ -1,0 +1,30 @@
+export const ALLOWED_INDUSTRIES = [
+  "AI / Healthcare Informatics",
+  "AI / ML Platforms",
+  "API Infrastructure / Backend-as-a-Service",
+  "Alternative Investments / Fintech",
+  "Creator Economy / Audio Technology",
+  "DevOps / Infrastructure",
+  "Fintech",
+  "Low-Code / Internal Tools Development",
+  "Marketing Automation",
+  "Revenue Intelligence / Sales Technology",
+  "Sales Technology",
+  "Software Consulting / Digital Transformation",
+  "Startup Ecosystem / Accelerator Operations Software",
+  "Synthetic Data / Privacy Technology",
+  "Telecommunications / Network Orchestration Software",
+];
+
+export const ALLOWED_TAGS = [
+  "AI",
+  "API",
+  "B2B",
+  "B2C",
+  "Enterprise",
+  "Marketplace",
+  "Mid-Market",
+  "Platform",
+  "SMB",
+  "SaaS",
+];

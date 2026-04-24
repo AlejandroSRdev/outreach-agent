@@ -15,6 +15,11 @@ from src.application.services.orchestrator import BatchOrchestrator
 from src.infrastructure.api.routers.health import router as health_router
 from src.infrastructure.api.routers.leads import router as leads_router
 from src.infrastructure.db.connection import verify_database_connection
+from src.infrastructure.db.campaigns import PGCampaignRepository
+from src.infrastructure.db.executions import PGExecutionRepository
+from src.application.use_cases.create_campaign import CreateCampaignUseCase
+from src.application.use_cases.start_execution import StartExecutionUseCase
+from src.infrastructure.api.routers.campaigns import router as campaigns_router
 
 
 # Defined before outreach_router is imported to resolve the circular import:
@@ -46,7 +51,14 @@ async def lifespan(app: FastAPI):
         refinement_timeout_s=settings.refinement_timeout_s,
     )
     semaphore = asyncio.Semaphore(settings.max_concurrent_pipelines)
-    app.state.orchestrator = BatchOrchestrator(pipeline=pipeline, semaphore=semaphore)
+    orchestrator = BatchOrchestrator(pipeline=pipeline, semaphore=semaphore)
+    app.state.orchestrator = orchestrator
+    campaign_repo = PGCampaignRepository()
+    execution_repo = PGExecutionRepository()
+    create_campaign_uc = CreateCampaignUseCase(campaign_repo)
+    start_execution_uc = StartExecutionUseCase(campaign_repo, execution_repo, orchestrator)
+    app.state.create_campaign_use_case = create_campaign_uc
+    app.state.start_execution_use_case = start_execution_uc
     yield
 
 
@@ -66,3 +78,4 @@ app.add_middleware(
 app.include_router(health_router)
 app.include_router(outreach_router, prefix="/outreach")
 app.include_router(leads_router)
+app.include_router(campaigns_router, prefix="/campaigns")
