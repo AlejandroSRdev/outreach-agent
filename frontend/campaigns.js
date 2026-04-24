@@ -62,8 +62,12 @@ async function submitCampaign() {
   try {
     const result = await createCampaign(industry, tags);
     const msg = document.createElement("div");
-    msg.textContent = "Campaign #" + result.campaign_id + " created — " + result.total_leads + " leads";
+    msg.textContent = "Campaign #" + result.campaign_id + " created — " + result.lead_ids.length + " leads";
     resultDiv.appendChild(msg);
+    document.dispatchEvent(new CustomEvent("campaign-created", {
+      detail: { lead_ids: result.lead_ids },
+      bubbles: false,
+    }));
   } catch (err) {
     const msg = document.createElement("div");
     msg.textContent = err instanceof CampaignApiError ? err.message : "Unexpected error";

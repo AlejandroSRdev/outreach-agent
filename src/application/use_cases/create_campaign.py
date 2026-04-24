@@ -14,7 +14,7 @@ class CreateCampaignUseCase:
     def __init__(self, campaign_repo: CampaignRepository) -> None:
         self._repo = campaign_repo
 
-    async def execute(self, industry: str, tags: list[str] | None) -> tuple[int, int]:
+    async def execute(self, industry: str, tags: list[str] | None) -> tuple[int, list[int]]:
         if industry not in ALLOWED_INDUSTRIES:
             raise InvalidFilterError(f"Invalid industry: {industry}")
 
@@ -31,4 +31,4 @@ class CreateCampaignUseCase:
         filters_dict = {"industry": industry, "tags": tags or []}
         campaign_id = await self._repo.create_campaign(filters_dict, lead_ids)
 
-        return campaign_id, len(lead_ids)
+        return campaign_id, lead_ids

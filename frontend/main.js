@@ -55,6 +55,7 @@ function renderTable() {
     checkbox.addEventListener("change", function () {
       onCheckboxChange(checkbox, lead);
     });
+    checkbox.checked = selectedLeads.some(function (l) { return l.id === lead.id; });
     tdSelect.appendChild(checkbox);
     tr.appendChild(tdSelect);
 
@@ -232,6 +233,24 @@ async function fetchLeads() {
     document.getElementById("run-btn").disabled = true;
   }
 }
+
+function onCampaignCreated(event) {
+  var lead_ids = event.detail.lead_ids;
+
+  var matched = lead_ids
+    .map(function (id) { return leadById[id]; })
+    .filter(function (lead) { return lead !== undefined; })
+    .slice(0, 20);
+
+  selectedLeads = matched;
+
+  var container = document.getElementById("lead-table-container");
+  container.innerHTML = "";
+  renderTable();
+  updateSelectionUI();
+}
+
+document.addEventListener("campaign-created", onCampaignCreated);
 
 // Init
 document.getElementById("run-btn").addEventListener("click", runBatch);
