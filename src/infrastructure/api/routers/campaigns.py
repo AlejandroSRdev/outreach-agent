@@ -17,7 +17,7 @@ class CampaignRequest(BaseModel):
 
 class CampaignResponse(BaseModel):
     campaign_id: int
-    total_leads: int
+    lead_ids: list[int]
 
 
 def get_create_campaign_use_case(request: Request) -> CreateCampaignUseCase:
@@ -30,8 +30,8 @@ async def create_campaign(
     use_case: CreateCampaignUseCase = Depends(get_create_campaign_use_case),
 ) -> CampaignResponse:
     try:
-        campaign_id, total_leads = await use_case.execute(body.industry, body.tags)
-        return CampaignResponse(campaign_id=campaign_id, total_leads=total_leads)
+        campaign_id, lead_ids = await use_case.execute(body.industry, body.tags)
+        return CampaignResponse(campaign_id=campaign_id, lead_ids=lead_ids)
     except InvalidFilterError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
     except EmptyCampaignError as exc:
