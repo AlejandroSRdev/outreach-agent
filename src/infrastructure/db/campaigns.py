@@ -12,22 +12,32 @@ class PGCampaignRepository:
         self, industry: str, tags: Optional[List[str]]
     ) -> List[int]:
         async with SessionLocal() as session:
-            query = text("""
-                SELECT id FROM leads
-                WHERE industry = :industry
-                AND (:tags IS NULL OR tags && :tags)
-            """).bindparams(
-                bindparam("tags", type_=ARRAY(TEXT))
-            )
 
-            result = await session.execute(
-                query,
-                {
+            if tags is None:
+                # Case 1: no tag filtering
+                query = text("""
+                    SELECT id FROM leads
+                    WHERE industry = :industry
+                """)
+
+                params = {"industry": industry}
+
+            else:
+                # Case 2: tag filtering
+                query = text("""
+                    SELECT id FROM leads
+                    WHERE industry = :industry
+                    AND tags && :tags
+                """).bindparams(
+                    bindparam("tags", type_=ARRAY(TEXT))
+                )
+
+                params = {
                     "industry": industry,
-                    "tags": tags if tags else None,
-                },
-            )
+                    "tags": tags,
+                }
 
+            result = await session.execute(query, params)
             rows = result.fetchall()
             return [row[0] for row in rows]
 
