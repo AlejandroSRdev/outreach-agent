@@ -6,6 +6,14 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <section id="campaign-section">
+    <label for="industry-select">Industry</label>
+    <select id="industry-select"></select>
+    <label>Tags (optional)</label>
+    <div id="tags-container"></div>
+    <button id="create-campaign-btn" disabled>Create Campaign</button>
+    <div id="campaign-result"></div>
+  </section>
   <h1>Outreach Agent</h1>
   <p id="app-description">Generate personalized outbound emails in batch using AI. Select leads, run the process, and get ready-to-use outreach messages instantly.</p>
 
@@ -19,5 +27,6 @@
   <div id="results-container"></div>
 
   <script type="module" src="main.js"></script>
+  <script type="module" src="campaigns.js"></script>
 </body>
 </html>

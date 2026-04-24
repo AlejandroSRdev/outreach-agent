@@ -1,11 +1,10 @@
 import asyncio
 import logging
-import uuid
+from typing import Any
 
 from src.domain.models.lead import LeadInput
 from src.domain.models.email import GeneratedEmail
 from src.application.services.pipeline import OutreachPipeline
-from src.infrastructure.logging.context import batch_id_var
 
 logger = logging.getLogger(__name__)
 
@@ -14,37 +13,6 @@ class BatchOrchestrator:
     def __init__(self, pipeline: OutreachPipeline, semaphore: asyncio.Semaphore) -> None:
         self.pipeline = pipeline
         self.semaphore = semaphore
-
-    async def run_batch(self, leads: list[LeadInput]) -> list[dict]:
-        batch_id = str(uuid.uuid4())
-        batch_id_var.set(batch_id)
-        logger.info("batch_start", extra={"lead_count": len(leads)})
-        batch_start_time = asyncio.get_event_loop().time()
-
-        coroutines = [self._run_one(lead) for lead in leads]
-        raw_results = await asyncio.gather(*coroutines, return_exceptions=True)
-
-        results = []
-        for lead, outcome in zip(leads, raw_results):
-            if not isinstance(outcome, Exception):
-                email, lead_name = outcome
-                results.append({"lead": lead_name, "status": "success", "result": email.model_dump()})
-            else:
-                results.append({"lead": str(lead.lead_id), "status": "failed", "error": str(outcome)})
-
-        succeeded = sum(1 for r in results if r["status"] == "success")
-        failed = len(results) - succeeded
-        duration_ms = int((asyncio.get_event_loop().time() - batch_start_time) * 1000)
-        logger.info(
-            "batch_complete",
-            extra={
-                "total": len(results),
-                "succeeded": succeeded,
-                "failed": failed,
-                "duration_ms": duration_ms,
-            },
-        )
-        return results
 
     async def _run_one(self, lead: LeadInput) -> GeneratedEmail:
         wait_start = asyncio.get_event_loop().time()
@@ -55,3 +23,59 @@ class BatchOrchestrator:
                 extra={"wait_ms": wait_ms},
             )
             return await self.pipeline.run(lead)
+
+    async def run_campaign_execution(
+        self,
+        execution_id: int,
+        leads: list[LeadInput],
+        execution_repo: Any,
+    ) -> None:
+        import time
+        completed = 0
+        failed = 0
+
+        async def _run_one_tracked(lead: LeadInput) -> None:
+            nonlocal completed, failed
+            start = time.monotonic()
+            async with self.semaphore:
+                try:
+                    result, _ = await self.pipeline.run(lead)
+                    latency_ms = int((time.monotonic() - start) * 1000)
+                    await execution_repo.update_execution_lead(
+                        execution_id=execution_id,
+                        lead_id=lead.lead_id,
+                        status="completed",
+                        output=result.model_dump(),
+                        error=None,
+                        cost=None,
+                        latency_ms=latency_ms,
+                    )
+                    completed += 1
+                except Exception as exc:
+                    latency_ms = int((time.monotonic() - start) * 1000)
+                    await execution_repo.update_execution_lead(
+                        execution_id=execution_id,
+                        lead_id=lead.lead_id,
+                        status="failed",
+                        output=None,
+                        error=str(exc),
+                        cost=None,
+                        latency_ms=latency_ms,
+                    )
+                    failed += 1
+
+        await asyncio.gather(*[_run_one_tracked(lead) for lead in leads])
+
+        if failed == 0:
+            final_status = "completed"
+        elif completed == 0:
+            final_status = "failed"
+        else:
+            final_status = "partial"
+
+        await execution_repo.finalize_execution(
+            execution_id=execution_id,
+            status=final_status,
+            completed=completed,
+            failed=failed,
+        )
