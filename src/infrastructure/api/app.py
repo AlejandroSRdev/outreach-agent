@@ -19,7 +19,9 @@ from src.infrastructure.db.campaigns import PGCampaignRepository
 from src.infrastructure.db.executions import PGExecutionRepository
 from src.application.use_cases.create_campaign import CreateCampaignUseCase
 from src.application.use_cases.start_execution import StartExecutionUseCase
+from src.application.use_cases.get_execution import GetExecutionUseCase
 from src.infrastructure.api.routers.campaigns import router as campaigns_router
+from src.infrastructure.api.routers.executions import router as executions_router
 
 
 # Defined before outreach_router is imported to resolve the circular import:
@@ -59,6 +61,8 @@ async def lifespan(app: FastAPI):
     start_execution_uc = StartExecutionUseCase(campaign_repo, execution_repo, orchestrator)
     app.state.create_campaign_use_case = create_campaign_uc
     app.state.start_execution_use_case = start_execution_uc
+    get_execution_uc = GetExecutionUseCase(execution_repo)
+    app.state.get_execution_use_case = get_execution_uc
     yield
 
 
@@ -79,3 +83,4 @@ app.include_router(health_router)
 app.include_router(outreach_router, prefix="/outreach")
 app.include_router(leads_router)
 app.include_router(campaigns_router, prefix="/campaigns")
+app.include_router(executions_router, prefix="/executions")
