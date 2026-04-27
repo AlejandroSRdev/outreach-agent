@@ -146,7 +146,7 @@ function startPolling(executionId) {
     document.getElementById("status-msg").textContent =
       "Processing... (" + (data.completed_leads + data.failed_leads) + "/" + data.total_leads + " leads done)";
 
-    if (data.status === "completed" || data.status === "pending" || data.status === "failed") {
+    if (data.status === "completed" || data.status === "failed") {
       stopPolling();
       pendingExecutionData = data;
       document.getElementById("show-results-btn").disabled = false;
