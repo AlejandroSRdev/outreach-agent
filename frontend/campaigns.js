@@ -65,7 +65,7 @@ async function submitCampaign() {
     msg.textContent = "Campaign #" + result.campaign_id + " created — " + result.lead_ids.length + " leads";
     resultDiv.appendChild(msg);
     document.dispatchEvent(new CustomEvent("campaign-created", {
-      detail: { lead_ids: result.lead_ids },
+      detail: { campaign_id: result.campaign_id, lead_ids: result.lead_ids },
       bubbles: false,
     }));
   } catch (err) {
