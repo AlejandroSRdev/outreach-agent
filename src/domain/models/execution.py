@@ -30,6 +30,7 @@ class Execution(BaseModel):
 class ExecutionLeadResult(BaseModel):
     lead_id: int
     name: str
+    email: str | None
     company: str
     industry: str
     status: str

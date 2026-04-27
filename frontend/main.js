@@ -181,6 +181,13 @@ function renderResults(leads) {
     header.textContent = item.name;
     block.appendChild(header);
 
+    if (item.email) {
+      const emailLine = document.createElement("div");
+      emailLine.className = "result-email";
+      emailLine.textContent = "Email: " + item.email;
+      block.appendChild(emailLine);
+    }
+
     const statusLine = document.createElement("div");
     if (item.status === "completed") {
       statusLine.className = "status-success";

@@ -7,6 +7,7 @@ from src.application.use_cases.get_execution import GetExecutionUseCase, Executi
 class ExecutionLeadResponse(BaseModel):
     lead_id: int
     name: str
+    email: str | None
     company: str
     industry: str
     status: str
@@ -50,6 +51,7 @@ async def get_execution(
             ExecutionLeadResponse(
                 lead_id=lead.lead_id,
                 name=lead.name,
+                email=lead.email,
                 company=lead.company,
                 industry=lead.industry,
                 status=lead.status,

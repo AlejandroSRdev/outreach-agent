@@ -89,7 +89,7 @@ class PGExecutionRepository:
                 text(
                     "SELECT e.id, e.status, e.total_leads, e.completed_leads, e.failed_leads,"
                     "       el.lead_id, el.status AS lead_status, el.output, el.error,"
-                    "       l.name, l.company, l.industry"
+                    "       l.name, l.email, l.company, l.industry"
                     " FROM executions e"
                     " LEFT JOIN execution_leads el ON el.execution_id = e.id"
                     " LEFT JOIN leads l ON l.id = el.lead_id"
@@ -107,6 +107,7 @@ class PGExecutionRepository:
             ExecutionLeadResult(
                 lead_id=row["lead_id"],
                 name=row["name"],
+                email=row["email"],
                 company=row["company"],
                 industry=row["industry"],
                 status=row["lead_status"],
