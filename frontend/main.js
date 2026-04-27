@@ -3,19 +3,11 @@ const API_URL = import.meta.env.VITE_API_URL;
 let leads = [];
 const leadById = {};
 
-function getDisplayName(apiLead) {
-  // On success, the API returns enriched.name (human-readable string).
-  // On failure, the API returns str(lead.lead_id) (numeric string) — look up locally.
-  const asInt = parseInt(apiLead, 10);
-  if (!isNaN(asInt) && leadById[asInt]) {
-    return leadById[asInt].name;
-  }
-  return apiLead;
-}
-
 let selectedLeads = [];
 let activeCampaignId = null;
 let isLoading = false;
+let pollingInterval = null;
+let pendingExecutionData = null;
 
 function renderTable() {
   const container = document.getElementById("lead-table-container");
@@ -93,72 +85,104 @@ function updateSelectionUI() {
 }
 
 async function runBatch() {
-  isLoading = true;
-
   const runBtn = document.getElementById("run-btn");
+  const showResultsBtn = document.getElementById("show-results-btn");
   const statusMsg = document.getElementById("status-msg");
   const resultsContainer = document.getElementById("results-container");
 
   runBtn.disabled = true;
-  statusMsg.textContent = "Processing batch...";
+  showResultsBtn.disabled = true;
   resultsContainer.innerHTML = "";
+  pendingExecutionData = null;
+  stopPolling();
+  statusMsg.textContent = "Starting execution...";
 
+  let response;
   try {
-    console.log("[runBatch] API_URL:", API_URL, "| endpoint:", `${API_URL}/outreach/batch`);
-
-    const response = await fetch(`${API_URL}/outreach/batch`, {
+    response = await fetch(`${API_URL}/outreach/batch`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ campaign_id: activeCampaignId }),
     });
-
-    console.log("[runBatch] fetch resolved — status:", response.status, "| ok:", response.ok, "| type:", response.type, "| url:", response.url);
-
-    if (response.ok) {
-      let data;
-      try {
-        data = await response.json();
-      } catch (jsonErr) {
-        const rawText = await response.clone().text();
-        console.error("[runBatch] JSON parse failed:");
-        console.error("  name:", jsonErr.name);
-        console.error("  message:", jsonErr.message);
-        console.error("  stack:", jsonErr.stack);
-        console.error("  raw response text:", rawText);
-        renderError("Response parse error — invalid JSON from server");
-        return;
-      }
-      renderResults(data.results);
-    } else {
-      renderError("Server error: " + response.status);
-    }
   } catch (err) {
-    console.error("[runBatch] catch block hit — full error:", err);
-    console.error("  name:", err.name);
-    console.error("  message:", err.message);
-    console.error("  stack:", err.stack);
     renderError("Network error — backend unreachable");
-  } finally {
-    isLoading = false;
     runBtn.disabled = false;
     statusMsg.textContent = "";
+    return;
+  }
+
+  if (!response.ok) {
+    renderError("Server error: " + response.status);
+    runBtn.disabled = false;
+    statusMsg.textContent = "";
+    return;
+  }
+
+  const data = await response.json();
+  statusMsg.textContent = "Execution started — " + data.total_leads + " leads queued";
+  startPolling(data.execution_id);
+}
+
+function startPolling(executionId) {
+  pollingInterval = setInterval(async function () {
+    let response;
+    try {
+      response = await fetch(`${API_URL}/executions/${executionId}`);
+    } catch (err) {
+      stopPolling();
+      renderError("Network error while polling");
+      document.getElementById("run-btn").disabled = false;
+      return;
+    }
+
+    if (!response.ok) {
+      stopPolling();
+      renderError("Failed to check execution: " + response.status);
+      document.getElementById("run-btn").disabled = false;
+      return;
+    }
+
+    const data = await response.json();
+    document.getElementById("status-msg").textContent =
+      "Processing... (" + (data.completed_leads + data.failed_leads) + "/" + data.total_leads + " leads done)";
+
+    if (data.status === "completed" || data.status === "pending" || data.status === "failed") {
+      stopPolling();
+      pendingExecutionData = data;
+      document.getElementById("show-results-btn").disabled = false;
+      document.getElementById("run-btn").disabled = false;
+      document.getElementById("status-msg").textContent = "Execution " + data.status + " — click Show Results";
+    }
+  }, 3000);
+}
+
+function stopPolling() {
+  if (pollingInterval !== null) {
+    clearInterval(pollingInterval);
+    pollingInterval = null;
   }
 }
 
-function renderResults(data) {
+function showResults() {
+  if (pendingExecutionData === null) return;
+  document.getElementById("results-container").innerHTML = "";
+  renderResults(pendingExecutionData.leads);
+}
+
+function renderResults(leads) {
   const container = document.getElementById("results-container");
 
-  data.forEach(function (item) {
+  leads.forEach(function (item) {
     const block = document.createElement("div");
     block.className = "result-block";
 
     const header = document.createElement("div");
     header.className = "result-header";
-    header.textContent = getDisplayName(item.lead);
+    header.textContent = item.name;
     block.appendChild(header);
 
     const statusLine = document.createElement("div");
-    if (item.status === "success") {
+    if (item.status === "completed") {
       statusLine.className = "status-success";
       statusLine.textContent = "Status: success";
     } else {
@@ -167,15 +191,15 @@ function renderResults(data) {
     }
     block.appendChild(statusLine);
 
-    if (item.status === "success" && item.result) {
+    if (item.status === "completed" && item.output !== null) {
       const subjectLine = document.createElement("div");
       subjectLine.className = "result-subject";
-      subjectLine.textContent = "Subject: " + item.result.subject;
+      subjectLine.textContent = "Subject: " + item.output.subject;
       block.appendChild(subjectLine);
 
       const textarea = document.createElement("textarea");
       textarea.readOnly = true;
-      textarea.value = item.result.body;
+      textarea.value = item.output.body;
       block.appendChild(textarea);
 
       const copyBtn = document.createElement("button");
@@ -191,7 +215,6 @@ function renderResults(data) {
       });
       block.appendChild(copyBtn);
     } else {
-      // Failed or missing result — render error message safely
       const errorLine = document.createElement("div");
       errorLine.className = "result-error";
       errorLine.textContent = "Error: " + (item.error || "Unknown error");
@@ -256,4 +279,5 @@ document.addEventListener("campaign-created", onCampaignCreated);
 
 // Init
 document.getElementById("run-btn").addEventListener("click", runBatch);
+document.getElementById("show-results-btn").addEventListener("click", showResults);
 fetchLeads();
