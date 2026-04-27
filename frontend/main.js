@@ -14,6 +14,7 @@ function getDisplayName(apiLead) {
 }
 
 let selectedLeads = [];
+let activeCampaignId = null;
 let isLoading = false;
 
 function renderTable() {
@@ -88,7 +89,7 @@ function updateSelectionUI() {
     "Selected: " + selectedLeads.length + " / 20";
 
   const runBtn = document.getElementById("run-btn");
-  runBtn.disabled = selectedLeads.length === 0;
+  runBtn.disabled = activeCampaignId === null || selectedLeads.length === 0;
 }
 
 async function runBatch() {
@@ -108,7 +109,7 @@ async function runBatch() {
     const response = await fetch(`${API_URL}/outreach/batch`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ leads: selectedLeads.map(function (l) { return { lead_id: l.id }; }) }),
+      body: JSON.stringify({ campaign_id: activeCampaignId }),
     });
 
     console.log("[runBatch] fetch resolved — status:", response.status, "| ok:", response.ok, "| type:", response.type, "| url:", response.url);
@@ -243,6 +244,7 @@ function onCampaignCreated(event) {
     .slice(0, 20);
 
   selectedLeads = matched;
+  activeCampaignId = event.detail.campaign_id;
 
   var container = document.getElementById("lead-table-container");
   container.innerHTML = "";
