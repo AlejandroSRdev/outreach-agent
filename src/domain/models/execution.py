@@ -25,3 +25,22 @@ class Execution(BaseModel):
     total_leads: int
     completed_leads: int
     failed_leads: int
+
+
+class ExecutionLeadResult(BaseModel):
+    lead_id: int
+    name: str
+    company: str
+    industry: str
+    status: str
+    output: dict | None
+    error: str | None
+
+
+class ExecutionWithLeads(BaseModel):
+    execution_id: int
+    status: str
+    total_leads: int
+    completed_leads: int
+    failed_leads: int
+    leads: list[ExecutionLeadResult]

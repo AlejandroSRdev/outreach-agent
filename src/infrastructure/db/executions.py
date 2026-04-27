@@ -3,6 +3,7 @@ import json
 from sqlalchemy import text
 
 from src.infrastructure.db.connection import SessionLocal, engine
+from src.domain.models.execution import ExecutionLeadResult, ExecutionWithLeads
 
 
 class PGExecutionRepository:
@@ -81,3 +82,46 @@ class PGExecutionRepository:
                 },
             )
             await session.commit()
+
+    async def get_execution_with_leads(self, execution_id: int) -> ExecutionWithLeads | None:
+        async with SessionLocal() as session:
+            result = await session.execute(
+                text(
+                    "SELECT e.id, e.status, e.total_leads, e.completed_leads, e.failed_leads,"
+                    "       el.lead_id, el.status AS lead_status, el.output, el.error,"
+                    "       l.name, l.company, l.industry"
+                    " FROM executions e"
+                    " LEFT JOIN execution_leads el ON el.execution_id = e.id"
+                    " LEFT JOIN leads l ON l.id = el.lead_id"
+                    " WHERE e.id = :execution_id"
+                ),
+                {"execution_id": execution_id},
+            )
+            rows = result.mappings().all()
+
+        if not rows:
+            return None
+
+        first = rows[0]
+        leads = [
+            ExecutionLeadResult(
+                lead_id=row["lead_id"],
+                name=row["name"],
+                company=row["company"],
+                industry=row["industry"],
+                status=row["lead_status"],
+                output=row["output"],
+                error=row["error"],
+            )
+            for row in rows
+            if row["lead_id"] is not None
+        ]
+
+        return ExecutionWithLeads(
+            execution_id=first["id"],
+            status=first["status"],
+            total_leads=first["total_leads"],
+            completed_leads=first["completed_leads"],
+            failed_leads=first["failed_leads"],
+            leads=leads,
+        )

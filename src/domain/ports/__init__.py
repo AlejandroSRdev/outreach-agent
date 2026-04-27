@@ -1,6 +1,7 @@
 from typing import Protocol
 from src.domain.models.lead import LeadInput, EnrichedLead
 from src.domain.models.email import DraftEmail, GeneratedEmail
+from src.domain.models.execution import ExecutionWithLeads
 
 
 class ResearchProvider(Protocol):
@@ -38,3 +39,4 @@ class ExecutionRepository(Protocol):
         completed: int,
         failed: int,
     ) -> None: ...
+    async def get_execution_with_leads(self, execution_id: int) -> ExecutionWithLeads | None: ...
