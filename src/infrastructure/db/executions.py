@@ -2,7 +2,7 @@ import json
 
 from sqlalchemy import text
 
-from src.infrastructure.db.connection import SessionLocal
+from src.infrastructure.db.connection import SessionLocal, engine
 
 
 class PGExecutionRepository:
@@ -39,30 +39,22 @@ class PGExecutionRepository:
         latency_ms: int | None,
     ) -> None:
         output_json = json.dumps(output) if output is not None else None
-        async with SessionLocal() as session:
-            await session.execute(
-                text(
-                    "UPDATE execution_leads"
-                    " SET status = :status,"
-                    "     output = :output::jsonb,"
-                    "     error = :error,"
-                    "     cost = :cost,"
-                    "     latency_ms = :latency_ms,"
-                    "     attempts = attempts + 1,"
-                    "     updated_at = now()"
-                    " WHERE execution_id = :execution_id AND lead_id = :lead_id"
-                ),
-                {
-                    "status": status,
-                    "output": output_json,
-                    "error": error,
-                    "cost": cost,
-                    "latency_ms": latency_ms,
-                    "execution_id": execution_id,
-                    "lead_id": lead_id,
-                },
+        async with engine.connect() as conn:
+            raw = await conn.get_raw_connection()
+            await raw.driver_connection.execute(
+                "UPDATE execution_leads"
+                " SET"
+                "     status = $1,"
+                "     output = $2::jsonb,"
+                "     error = $3,"
+                "     cost = $4,"
+                "     latency_ms = $5,"
+                "     attempts = attempts + 1,"
+                "     updated_at = now()"
+                " WHERE execution_id = $6 AND lead_id = $7",
+                status, output_json, error, cost, latency_ms, execution_id, lead_id,
             )
-            await session.commit()
+            await conn.commit()
 
     async def finalize_execution(
         self,
