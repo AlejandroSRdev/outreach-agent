@@ -3,7 +3,7 @@ import json
 from sqlalchemy import text
 
 from src.infrastructure.db.connection import SessionLocal, engine
-from src.domain.models.execution import ExecutionLeadResult, ExecutionWithLeads
+from src.domain.models.execution import ExecutionLeadResult, ExecutionWithLeads, RunningExecution, CleanupResult, LastExecutionByIndustry
 
 
 class PGExecutionRepository:
@@ -126,3 +126,81 @@ class PGExecutionRepository:
             failed_leads=first["failed_leads"],
             leads=leads,
         )
+
+    async def list_running_executions(self) -> list[RunningExecution]:
+        async with SessionLocal() as session:
+            result = await session.execute(
+                text(
+                    "SELECT id, campaign_id, status, started_at"
+                    " FROM executions"
+                    " WHERE status = 'running'"
+                )
+            )
+            rows = result.mappings().all()
+
+        if not rows:
+            return []
+
+        return [
+            RunningExecution(
+                id=row["id"],
+                campaign_id=row["campaign_id"],
+                status=row["status"],
+                started_at=row["started_at"],
+            )
+            for row in rows
+        ]
+
+    async def cleanup_zombie_executions(self, timeout_minutes: int) -> CleanupResult:
+        async with SessionLocal() as session:
+            async with session.begin():
+                result = await session.execute(
+                    text(
+                        "UPDATE executions"
+                        " SET status = 'failed',"
+                        "     finished_at = now()"
+                        " WHERE status = 'running'"
+                        "   AND started_at < now() - (:timeout_minutes * INTERVAL '1 minute')"
+                        " RETURNING id"
+                    ),
+                    {"timeout_minutes": timeout_minutes},
+                )
+                ids = [row["id"] for row in result.mappings().all()]
+
+        return CleanupResult(cleaned_count=len(ids), execution_ids=ids)
+
+    async def get_last_executions_by_industry(self) -> list[LastExecutionByIndustry]:
+        async with SessionLocal() as session:
+            result = await session.execute(
+                text(
+                    "SELECT DISTINCT ON (c.filters->>'industry')"
+                    "    c.filters->>'industry' AS industry,"
+                    "    e.id AS execution_id,"
+                    "    e.status,"
+                    "    e.started_at,"
+                    "    e.finished_at"
+                    " FROM executions e"
+                    " JOIN campaigns c ON c.id = e.campaign_id"
+                    " WHERE c.filters->>'industry' IS NOT NULL"
+                    "   AND e.status = 'completed'"
+                    "   AND e.finished_at IS NOT NULL"
+                    " ORDER BY"
+                    "     c.filters->>'industry',"
+                    "     e.finished_at DESC"
+                )
+            )
+            rows = result.mappings().all()
+
+        if not rows:
+            return []
+
+        return [
+            LastExecutionByIndustry(
+                industry=row["industry"],
+                execution_id=row["execution_id"],
+                status=row["status"],
+                started_at=row["started_at"],
+                finished_at=row["finished_at"],
+            )
+            for row in rows
+        ]

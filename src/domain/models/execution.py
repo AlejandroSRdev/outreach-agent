@@ -45,3 +45,23 @@ class ExecutionWithLeads(BaseModel):
     completed_leads: int
     failed_leads: int
     leads: list[ExecutionLeadResult]
+
+
+class RunningExecution(BaseModel):
+    id: int
+    campaign_id: int
+    status: str
+    started_at: datetime
+
+
+class CleanupResult(BaseModel):
+    cleaned_count: int
+    execution_ids: list[int]
+
+
+class LastExecutionByIndustry(BaseModel):
+    industry: str
+    execution_id: int
+    status: str
+    started_at: datetime
+    finished_at: datetime
