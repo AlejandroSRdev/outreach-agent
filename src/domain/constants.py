@@ -18,3 +18,5 @@ ALLOWED_TAGS: list[str] = [
     "SMB",
     "SaaS",
 ]
+
+ZOMBIE_EXECUTION_TIMEOUT_MINUTES: int = 10

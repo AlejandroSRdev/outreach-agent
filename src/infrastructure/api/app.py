@@ -20,6 +20,9 @@ from src.infrastructure.db.executions import PGExecutionRepository
 from src.application.use_cases.create_campaign import CreateCampaignUseCase
 from src.application.use_cases.start_execution import StartExecutionUseCase
 from src.application.use_cases.get_execution import GetExecutionUseCase
+from src.application.use_cases.list_running_executions import ListRunningExecutionsUseCase
+from src.application.use_cases.cleanup_zombie_executions import CleanupZombieExecutionsUseCase
+from src.application.use_cases.get_last_executions_by_industry import GetLastExecutionsByIndustryUseCase
 from src.infrastructure.api.routers.campaigns import router as campaigns_router
 from src.infrastructure.api.routers.executions import router as executions_router
 
@@ -63,6 +66,12 @@ async def lifespan(app: FastAPI):
     app.state.start_execution_use_case = start_execution_uc
     get_execution_uc = GetExecutionUseCase(execution_repo)
     app.state.get_execution_use_case = get_execution_uc
+    list_running_executions_uc = ListRunningExecutionsUseCase(execution_repo)
+    cleanup_zombie_executions_uc = CleanupZombieExecutionsUseCase(execution_repo)
+    app.state.list_running_executions_use_case = list_running_executions_uc
+    app.state.cleanup_zombie_executions_use_case = cleanup_zombie_executions_uc
+    get_last_executions_by_industry_uc = GetLastExecutionsByIndustryUseCase(execution_repo)
+    app.state.get_last_executions_by_industry_use_case = get_last_executions_by_industry_uc
     yield
 
 
