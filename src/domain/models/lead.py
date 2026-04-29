@@ -26,6 +26,7 @@ class EnrichedLead(BaseModel):
     strategic_focus: Optional[str]
 
     assembled_at: datetime
+    email: str | None = None
 
 
 class LeadNotFoundError(Exception):

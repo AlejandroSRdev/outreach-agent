@@ -2,7 +2,7 @@ import asyncio
 import logging
 import uuid
 
-from src.domain.models.lead import LeadInput
+from src.domain.models.lead import LeadInput, EnrichedLead
 from src.domain.models.email import GeneratedEmail
 from src.domain.ports import ResearchProvider, AIClient
 from src.infrastructure.ai.retry import with_retry, is_llm_error, CORRECTION_HINT
@@ -48,7 +48,7 @@ class OutreachPipeline:
         self.generation_timeout_s = generation_timeout_s
         self.refinement_timeout_s = refinement_timeout_s
 
-    async def run(self, lead: LeadInput) -> tuple[GeneratedEmail, str]:
+    async def run(self, lead: LeadInput) -> tuple[GeneratedEmail, EnrichedLead]:
         run_id = str(uuid.uuid4())
         request_id_var.set(run_id)
         lead_id_var.set(lead.lead_id)
@@ -93,4 +93,4 @@ class OutreachPipeline:
         )
 
         logger.info("pipeline_complete")
-        return result, enriched.name
+        return result, enriched

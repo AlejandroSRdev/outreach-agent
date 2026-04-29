@@ -68,12 +68,16 @@ def build_generation_prompt(enriched: EnrichedLead, hint: str | None = None) -> 
         "",
         "<email body here>",
         "",
+        "Alejandro Saavedra Ruiz",
+        "AI Automation Engineer",
+        "",
         "## Output rules",
         "- Subject must be short and relevant",
         "- Body must be between 100 and 1500 characters. Outputs outside this range are invalid.",
         "- Body must be plain text",
         "- Body must read like a real email",
         "- Body must include a clear but low-pressure closing",
+        "- Body must end with the signature: \"Alejandro Saavedra Ruiz\\nAI Automation Engineer\"",
         "- No markdown",
     ]
 
