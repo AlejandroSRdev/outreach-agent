@@ -22,4 +22,5 @@ class DBResearchProvider:
             additional_context=data.get("additional_context"),
             assembled_at=datetime.utcnow(),
             description=data.get("description"),
+            email=data.get("email"),
         )

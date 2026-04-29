@@ -15,9 +15,10 @@ _COLUMNS = [
     "additional_context",
     "description",
     "tags",
+    "email",
 ]
 
-_SELECT = "name, company, role, industry, product, value_proposition, target_market, recent_activity, strategic_focus, additional_context, description, tags::text[]"
+_SELECT = "name, company, role, industry, product, value_proposition, target_market, recent_activity, strategic_focus, additional_context, description, tags::text[], email"
 
 _QUERY = text(
     f"SELECT {_SELECT} FROM leads WHERE id = :lead_id LIMIT 1"

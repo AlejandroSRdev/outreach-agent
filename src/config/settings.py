@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     research_timeout_s: int = 30
     generation_timeout_s: int = 30
     refinement_timeout_s: int = 20
+    mode: str = "TEST"
+    resend_key: str | None = None
 
 
 settings = Settings()
