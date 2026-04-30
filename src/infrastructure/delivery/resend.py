@@ -7,7 +7,7 @@ async def send_email(resend_key: str, to: str, subject: str, html: str) -> None:
             "https://api.resend.com/emails",
             headers={"Authorization": f"Bearer {resend_key}"},
             json={
-                "from": "onboarding@resend.dev",
+                "from": "Alejandro Saavedra Ruiz <contact@asrdev.eu>",
                 "to": [to],
                 "subject": subject,
                 "html": html,
